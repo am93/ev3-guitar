@@ -61,6 +61,8 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.connect(MQTT_HOSTNAME, MQTT_PORT, 60)
 
+client.loop_start()
+
 ########################################################################
 ## Linux signal handler
 ########################################################################
@@ -107,7 +109,6 @@ while True:
         LAST_CLC = new_clc
 
         client.publish(MQTT_TOPIC, str(new_note)+";"+str(new_btn)+";"+str(new_clc));
-        client.loop_write()
 
         time_end = timer()
 

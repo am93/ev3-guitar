@@ -10,8 +10,9 @@ public class MqttCommunicator implements MqttCallback {
 
     // Connection related parameters
     private final int QOS = 0;
-    private final String MQTT_TOPIC = "sound_data";
-    private final String MQTT_BROKER = "tcp://127.0.0.1:10042"; //"tcp://192.168.0.102:10042"
+    private final String MQTT_TOPIC = "/sound_data";
+    //private final String MQTT_BROKER = "tcp://127.0.0.1:10042";
+    private final String MQTT_BROKER = "tcp://192.168.0.102:10042";
     private final String CLIENT_ID = "MAIN_STATION";
 
     // instance of mqtt client
@@ -68,7 +69,7 @@ public class MqttCommunicator implements MqttCallback {
     /**
      * Callback to be called on message arrival.
      * @param topic source of message
-     * @param msg recieved payload
+     * @param msg received payload
      * @throws Exception
      */
     public void messageArrived(String topic, MqttMessage msg) throws Exception {
@@ -80,15 +81,14 @@ public class MqttCommunicator implements MqttCallback {
     }
 
     public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
-        // This should be never called, because we have QOS = 0, it has to be implemented becasue of interface !
+        // This should be never called, because we have QOS = 0, it has to be implemented because of interface !
     }
 
     /**
      * This function should be called to obtain data from queue.
      * @return Integer[] or null if queue is empty
      */
-    public Integer[] getQueueData()
-    {
+    public Integer[] getQueueData() {
         return dataQueue.isEmpty() ? null : dataQueue.poll();
     }
 }
