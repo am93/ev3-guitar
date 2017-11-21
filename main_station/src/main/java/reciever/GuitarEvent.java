@@ -47,31 +47,50 @@ public class GuitarEvent {
 
         /** MIDI number. */
         public final int midiNumber;
-
+    
+        /**
+         * Constructor.
+         * @param value MIDI number.
+         */
         Note(int value) {
             this.midiNumber = value;
         }
     }
 
+    /** Enum representing musical and MIDI note. */
     public final Note note;
-    public final boolean picked;
+    /** Is note being played (picked). */
+    public final boolean played;
+    /** Signals that the octave arm on EV3 is raised. */
     public final boolean isArmRaised;
 
+    /** The value used for signalling that a note is being played on EV3. */
     private static final int PICKED = 0;
 
+    /** Closest slider position on EV3's neck (highest note). */
     private static final int NECK_HIGHEST_POSITION = 0;
+    /** Furthest slider position on EV3's neck (lowest note). */
     private static final int NECK_LOWEST_POSITION = 69;
 
+    /** Lowest allowed position of ostave arm. */
     private static final int ARM_LOWEST_POSITION = 60;
+    /** Highest allowed position of octave arm. */
     private static final int ARM_HIGHEST_POSITION = 0;
 
+    /** Constructs a new GuitarEvent containing {@link Note#ERROR} note. */
     public GuitarEvent() {
         this.note = Note.ERROR;
-        this.picked = false;
+        this.played = false;
         this.isArmRaised = false;
     }
-
-    public GuitarEvent(int distance, int picked, int armPosition) {
+    
+    /**
+     * Constructs a new GuitarEvent object.
+     * @param distance received slider distance on guitar neck.
+     * @param played is the guitar "string" being "plucked".
+     * @param armPosition rotation on octave arm.
+     */
+    public GuitarEvent(int distance, int played, int armPosition) {
         if (distance < NECK_HIGHEST_POSITION) {
             distance = NECK_HIGHEST_POSITION;
         } else if (distance > NECK_LOWEST_POSITION) {
@@ -89,7 +108,7 @@ public class GuitarEvent {
             case 7: this.note = Note.C5; break;
             default: this.note = Note.ERROR;
         }
-        this.picked = picked == PICKED;
+        this.played = played == PICKED;
         this.isArmRaised = armPosition > (ARM_LOWEST_POSITION - ARM_HIGHEST_POSITION) / 2;
     }
 
@@ -104,7 +123,7 @@ public class GuitarEvent {
 
         GuitarEvent event = (GuitarEvent) o;
 
-        if (picked != event.picked) {
+        if (played != event.played) {
             return false;
         }
         if (isArmRaised != event.isArmRaised) {
@@ -115,6 +134,6 @@ public class GuitarEvent {
 
     @Override
     public String toString() {
-        return note + ", " + (picked ? "" : "not ") + "picked, " + (isArmRaised ? "raised" : "");
+        return note + ", " + (played ? "" : "not ") + "played, " + (isArmRaised ? "raised" : "");
     }
 }

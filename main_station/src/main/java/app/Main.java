@@ -38,7 +38,7 @@ public class Main {
             }
 
             channel.allNotesOff();
-            if (event.picked) {
+            if (event.played) {
                 channel.noteOn(event.note.midiNumber, 120);
             }
         }
