@@ -20,6 +20,8 @@ public class Main {
         }
 
         MidiChannel channel = synth.getChannels()[0];
+        // electric guitar (overdriven)
+        channel.programChange(29);
 
         System.out.println("Ready");
 
@@ -29,18 +31,18 @@ public class Main {
             Integer[] receive;
             while((receive = communicator.getQueueData()) == null);
 
-            System.out.printf("%d;%d;%d: ", receive[0], receive[1], receive[2]);
+            System.out.printf("%d;%d;%d -> ", receive[0], receive[1], receive[2]);
             GuitarEvent event = new GuitarEvent(receive[0], receive[1], receive[2]);
             System.out.println(event.toString());
 
-            if (event.equals(oldEvent) || event.note == GuitarEvent.Note.ERROR) {
-                continue;
+            if (event.played && !event.equals(oldEvent) && event.note != GuitarEvent.Note.ERROR) {
+                channel.allNotesOff();
+                int midiNumber = event.note.midiNumber + (event.isArmRaised ? GuitarEvent.OCTAVE_MODIFIER : 0);
+                channel.noteOn(midiNumber, 120);
+            } else if (!event.equals(oldEvent)) {
+                channel.allNotesOff();
             }
-
-            channel.allNotesOff();
-            if (event.played) {
-                channel.noteOn(event.note.midiNumber, 120);
-            }
+            oldEvent = event;
         }
     }
 

@@ -73,9 +73,12 @@ public class GuitarEvent {
     private static final int NECK_LOWEST_POSITION = 69;
 
     /** Lowest allowed position of ostave arm. */
-    private static final int ARM_LOWEST_POSITION = 60;
+    private static final int ARM_LOWEST_POSITION = 70;
     /** Highest allowed position of octave arm. */
     private static final int ARM_HIGHEST_POSITION = 0;
+
+    /** MIDI number difference in an octave. */
+    public static final int OCTAVE_MODIFIER = 12;
 
     /** Constructs a new GuitarEvent containing {@link Note#ERROR} note. */
     public GuitarEvent() {
@@ -96,20 +99,26 @@ public class GuitarEvent {
         } else if (distance > NECK_LOWEST_POSITION) {
             distance = NECK_LOWEST_POSITION;
         }
-        // TODO: 15.11.2017 change
-        switch (distance / 9) {
+        // without ERROR note
+        final int NUMBER_OF_NOTES = Note.values().length - 1;
+        switch (distance * NUMBER_OF_NOTES / (NECK_LOWEST_POSITION - NECK_HIGHEST_POSITION + 1)) {
             case 0: this.note = Note.C6; break;
             case 1: this.note = Note.B5; break;
-            case 2: this.note = Note.A5; break;
-            case 3: this.note = Note.G5; break;
-            case 4: this.note = Note.F5; break;
-            case 5: this.note = Note.E5; break;
-            case 6: this.note = Note.D5; break;
-            case 7: this.note = Note.C5; break;
+            case 2: this.note = Note.Ash5; break;
+            case 3: this.note = Note.A5; break;
+            case 4: this.note = Note.Gsh5; break;
+            case 5: this.note = Note.G5; break;
+            case 6: this.note = Note.Fsh5; break;
+            case 7: this.note = Note.F5; break;
+            case 8: this.note = Note.E5; break;
+            case 9: this.note = Note.Dsh5; break;
+            case 10: this.note = Note.D5; break;
+            case 11: this.note = Note.Csh5; break;
+            case 12: this.note = Note.C5; break;
             default: this.note = Note.ERROR;
         }
         this.played = played == PICKED;
-        this.isArmRaised = armPosition > (ARM_LOWEST_POSITION - ARM_HIGHEST_POSITION) / 2;
+        this.isArmRaised = armPosition < (ARM_LOWEST_POSITION - ARM_HIGHEST_POSITION) / 2;
     }
 
     @Override
@@ -134,6 +143,6 @@ public class GuitarEvent {
 
     @Override
     public String toString() {
-        return note + ", " + (played ? "" : "not ") + "played, " + (isArmRaised ? "raised" : "");
+        return note + ", " + (played ? "" : "not ") + "played" + (isArmRaised ? ", raised" : "");
     }
 }
