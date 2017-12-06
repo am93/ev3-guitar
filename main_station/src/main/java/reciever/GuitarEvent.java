@@ -170,7 +170,7 @@ public class GuitarEvent {
 
         // calculate pitch bend
         final int PITCH_BUCKETS_PER_NOTE = (NECK_LOWEST_POSITION - NECK_HIGHEST_POSITION + 1) / NUMBER_OF_NOTES;
-        final int normalised = distance - PITCH_BUCKETS_PER_NOTE * noteBucket - PITCH_BUCKETS_PER_NOTE / 2;
+        final int normalised = distance - PITCH_BUCKETS_PER_NOTE * (noteBucket - 1) - PITCH_BUCKETS_PER_NOTE / 2;
         // TODO: 6.12.2017 remove hard-coding
         switch (normalised) {
             case -2: this.pitchBend = PITCH_BEND_DOWN_LIMIT; break;
