@@ -42,6 +42,8 @@ public class GuitarEvent {
         B5(71),
         /** C6. */
         C6(72),
+        /** C#6. */
+        Csh6(73),
         /** Error note. */
         ERROR(-1);
 
@@ -57,25 +59,67 @@ public class GuitarEvent {
         }
     }
 
+    /**
+     * Position of the octave arm.
+     */
+    public enum ArmPosition {
+        /** Lowest position. */
+        DOWN,
+        /** Middle position. */
+        MIDDLE,
+        /** Highest position. */
+        UP;
+
+        /** Lowest allowed position of octave arm. */
+        private static final int ARM_LOWEST_POSITION = 45;
+        /** Highest allowed position of octave arm. */
+        private static final int ARM_HIGHEST_POSITION = -20;
+
+        public static ArmPosition toArmPosition(int rotation) {
+            // normalize values
+            if (rotation > ARM_LOWEST_POSITION) {
+                rotation = ARM_LOWEST_POSITION;
+            } else if (rotation < ARM_HIGHEST_POSITION) {
+                rotation = ARM_HIGHEST_POSITION;
+            }
+            // move the range to [0, 65]
+            rotation += -ARM_HIGHEST_POSITION;
+            switch (rotation * ArmPosition.values().length / (ARM_LOWEST_POSITION - ARM_HIGHEST_POSITION + 1)) {
+                case 0: return UP;
+                case 1: return MIDDLE;
+                case 2: return DOWN;
+                default:
+                    System.err.println("Arm position out of range - returning DOWN.");
+                    return DOWN;
+            }
+        }
+    }
+
     /** Enum representing musical and MIDI note. */
     public final Note note;
     /** Is note being played (picked). */
     public final boolean played;
     /** Signals that the octave arm on EV3 is raised. */
-    public final boolean isArmRaised;
+    public final ArmPosition armPosition;
+    /** Pitch bend on a note. */
+    public final int pitchBend;
 
     /** The value used for signalling that a note is being played on EV3. */
     private static final int PICKED = 0;
 
     /** Closest slider position on EV3's neck (highest note). */
-    private static final int NECK_HIGHEST_POSITION = 0;
+    private static final int NECK_HIGHEST_POSITION = 1;
     /** Furthest slider position on EV3's neck (lowest note). */
-    private static final int NECK_LOWEST_POSITION = 69;
+    private static final int NECK_LOWEST_POSITION = 70;
 
-    /** Lowest allowed position of ostave arm. */
-    private static final int ARM_LOWEST_POSITION = 70;
-    /** Highest allowed position of octave arm. */
-    private static final int ARM_HIGHEST_POSITION = 0;
+    /** Default pitch bend amount - no bend. */
+    public static final int PITCH_BEND_DEFAULT = 8192;
+    /** Maximum allowed pitch bend - up or down a semitone. */
+    private static final int PITCH_BEND_MAX_BEND = 4096;
+    /** Lowest pitch bend amount - down a semitone. */
+    private static final int PITCH_BEND_DOWN_LIMIT = PITCH_BEND_DEFAULT - PITCH_BEND_MAX_BEND;
+    /** Highest pitch bend amount - up a semitone. */
+    private static final int PITCH_BEND_UP_LIMIT = PITCH_BEND_DEFAULT + PITCH_BEND_MAX_BEND;
 
     /** MIDI number difference in an octave. */
     public static final int OCTAVE_MODIFIER = 12;
@@ -84,7 +128,8 @@ public class GuitarEvent {
     public GuitarEvent() {
         this.note = Note.ERROR;
         this.played = false;
-        this.isArmRaised = false;
+        this.armPosition = ArmPosition.DOWN;
+        this.pitchBend = PITCH_BEND_DEFAULT;
     }
     
     /**
@@ -94,6 +139,9 @@ public class GuitarEvent {
      * @param armPosition rotation on octave arm.
      */
     public GuitarEvent(int distance, int played, int armPosition) {
+        this.played = played == PICKED;
+        this.armPosition = ArmPosition.toArmPosition(armPosition);
+
         if (distance < NECK_HIGHEST_POSITION) {
             distance = NECK_HIGHEST_POSITION;
         } else if (distance > NECK_LOWEST_POSITION) {
@@ -101,24 +149,39 @@ public class GuitarEvent {
         }
         // without ERROR note
         final int NUMBER_OF_NOTES = Note.values().length - 1;
-        switch (distance * NUMBER_OF_NOTES / (NECK_LOWEST_POSITION - NECK_HIGHEST_POSITION + 1)) {
-            case 0: this.note = Note.C6; break;
-            case 1: this.note = Note.B5; break;
-            case 2: this.note = Note.Ash5; break;
-            case 3: this.note = Note.A5; break;
-            case 4: this.note = Note.Gsh5; break;
-            case 5: this.note = Note.G5; break;
-            case 6: this.note = Note.Fsh5; break;
-            case 7: this.note = Note.F5; break;
-            case 8: this.note = Note.E5; break;
-            case 9: this.note = Note.Dsh5; break;
-            case 10: this.note = Note.D5; break;
-            case 11: this.note = Note.Csh5; break;
-            case 12: this.note = Note.C5; break;
+        final int noteBucket = (int) Math.ceil((double) distance * NUMBER_OF_NOTES / (NECK_LOWEST_POSITION - NECK_HIGHEST_POSITION));
+        switch (noteBucket) {
+            case 1: this.note = Note.Csh6; break;
+            case 2: this.note = Note.C6; break;
+            case 3: this.note = Note.B5; break;
+            case 4: this.note = Note.Ash5; break;
+            case 5: this.note = Note.A5; break;
+            case 6: this.note = Note.Gsh5; break;
+            case 7: this.note = Note.G5; break;
+            case 8: this.note = Note.Fsh5; break;
+            case 9: this.note = Note.F5; break;
+            case 10: this.note = Note.E5; break;
+            case 11: this.note = Note.Dsh5; break;
+            case 12: this.note = Note.D5; break;
+            case 13: this.note = Note.Csh5; break;
+            case 14: this.note = Note.C5; break;
             default: this.note = Note.ERROR;
         }
-        this.played = played == PICKED;
-        this.isArmRaised = armPosition < (ARM_LOWEST_POSITION - ARM_HIGHEST_POSITION) / 2;
+
+        // calculate pitch bend
+        final int PITCH_BUCKETS_PER_NOTE = (NECK_LOWEST_POSITION - NECK_HIGHEST_POSITION + 1) / NUMBER_OF_NOTES;
+        final int normalised = distance - PITCH_BUCKETS_PER_NOTE * noteBucket - PITCH_BUCKETS_PER_NOTE / 2;
+        // TODO: 6.12.2017 remove hard-coding
+        switch (normalised) {
+            case -2: this.pitchBend = PITCH_BEND_DOWN_LIMIT; break;
+            case -1: this.pitchBend = PITCH_BEND_DOWN_LIMIT / 2; break;
+            case 0: this.pitchBend = PITCH_BEND_DEFAULT; break;
+            case 1: this.pitchBend = PITCH_BEND_UP_LIMIT / 2; break;
+            case 2: this.pitchBend = PITCH_BEND_UP_LIMIT; break;
+            default:
+                System.err.println("Pitch bend out of range.");
+                this.pitchBend = PITCH_BEND_DEFAULT;
+        }
     }
 
     @Override
@@ -135,7 +198,7 @@ public class GuitarEvent {
         if (played != event.played) {
             return false;
         }
-        if (isArmRaised != event.isArmRaised) {
+        if (armPosition != event.armPosition) {
             return false;
         }
         return note == event.note;
@@ -143,6 +206,6 @@ public class GuitarEvent {
 
     @Override
     public String toString() {
-        return note + ", " + (played ? "" : "not ") + "played" + (isArmRaised ? ", raised" : "");
+        return note + ", " + (played ? "" : "not ") + "played, arm position: " + armPosition.toString() + ", bend: " + pitchBend;
     }
 }

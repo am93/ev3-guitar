@@ -37,7 +37,9 @@ public class Main {
 
             if (event.played && !event.equals(oldEvent) && event.note != GuitarEvent.Note.ERROR) {
                 channel.allNotesOff();
-                int midiNumber = event.note.midiNumber + (event.isArmRaised ? GuitarEvent.OCTAVE_MODIFIER : 0);
+                int midiNumber = event.note.midiNumber +
+                        (event.armPosition == GuitarEvent.ArmPosition.MIDDLE ? GuitarEvent.OCTAVE_MODIFIER : 0);
+                channel.setPitchBend(event.armPosition == GuitarEvent.ArmPosition.UP ? event.pitchBend : GuitarEvent.PITCH_BEND_DEFAULT);
                 channel.noteOn(midiNumber, 120);
             } else if (!event.equals(oldEvent)) {
                 channel.allNotesOff();
