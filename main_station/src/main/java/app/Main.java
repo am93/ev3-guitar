@@ -38,8 +38,8 @@ public class Main {
             if (event.played && !event.equals(oldEvent) && event.note != GuitarEvent.Note.ERROR) {
                 channel.allNotesOff();
                 int midiNumber = event.note.midiNumber +
-                        (event.armPosition == GuitarEvent.ArmPosition.MIDDLE ? GuitarEvent.OCTAVE_MODIFIER : 0);
-                channel.setPitchBend(event.armPosition == GuitarEvent.ArmPosition.UP ? event.pitchBend : GuitarEvent.PITCH_BEND_DEFAULT);
+                        (event.armPosition == GuitarEvent.ArmPosition.OCTAVE_UP ? GuitarEvent.OCTAVE_MODIFIER : 0);
+                channel.setPitchBend(event.armPosition == GuitarEvent.ArmPosition.SLIDE ? event.pitchBend : GuitarEvent.PITCH_BEND_DEFAULT);
                 channel.noteOn(midiNumber, 120);
             } else if (!event.equals(oldEvent)) {
                 channel.allNotesOff();

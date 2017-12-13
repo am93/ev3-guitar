@@ -63,17 +63,19 @@ public class GuitarEvent {
      * Position of the octave arm.
      */
     public enum ArmPosition {
-        /** Lowest position. */
-        DOWN,
-        /** Middle position. */
-        MIDDLE,
-        /** Highest position. */
-        UP;
+        /** Lowest position. No effect. */
+        NORMAL,
+        /** Lower middle position. Raise notes for an octave. */
+        OCTAVE_UP,
+        /** Upper middle position. Use C pentatonic scale. */
+        PENTATONIC,
+        /** Highest position. Use pitch bends. */
+        SLIDE;
 
         /** Lowest allowed position of octave arm. */
-        private static final int ARM_LOWEST_POSITION = 45;
+        private static final int ARM_LOWEST_POSITION = 65;
         /** Highest allowed position of octave arm. */
-        private static final int ARM_HIGHEST_POSITION = -20;
+        private static final int ARM_HIGHEST_POSITION = -5;
 
         public static ArmPosition toArmPosition(int rotation) {
             // normalize values
@@ -82,15 +84,16 @@ public class GuitarEvent {
             } else if (rotation < ARM_HIGHEST_POSITION) {
                 rotation = ARM_HIGHEST_POSITION;
             }
-            // move the range to [0, 65]
+            // move the range to [0, ...]
             rotation += -ARM_HIGHEST_POSITION;
             switch (rotation * ArmPosition.values().length / (ARM_LOWEST_POSITION - ARM_HIGHEST_POSITION + 1)) {
-                case 0: return UP;
-                case 1: return MIDDLE;
-                case 2: return DOWN;
+                case 0: return SLIDE;
+                case 1: return PENTATONIC;
+                case 2: return OCTAVE_UP;
+                case 3: return NORMAL;
                 default:
-                    System.err.println("Arm position out of range - returning DOWN.");
-                    return DOWN;
+                    System.err.println("Arm position out of range - returning NORMAL.");
+                    return NORMAL;
             }
         }
     }
@@ -128,7 +131,7 @@ public class GuitarEvent {
     public GuitarEvent() {
         this.note = Note.ERROR;
         this.played = false;
-        this.armPosition = ArmPosition.DOWN;
+        this.armPosition = ArmPosition.NORMAL;
         this.pitchBend = PITCH_BEND_DEFAULT;
     }
     
@@ -148,60 +151,59 @@ public class GuitarEvent {
             distance = NECK_LOWEST_POSITION;
         }
         // without ERROR note
-        final int NUMBER_OF_NOTES = Note.values().length - 1;
+        final int NUMBER_OF_NOTES = this.armPosition == ArmPosition.PENTATONIC ? 5 : Note.values().length - 1;
         final int noteBucket = (int) Math.ceil((double) distance * NUMBER_OF_NOTES / (NECK_LOWEST_POSITION - NECK_HIGHEST_POSITION));
-        switch (noteBucket) {
-            case 1: this.note = Note.Csh6; break;
-            case 2: this.note = Note.C6; break;
-            case 3: this.note = Note.B5; break;
-            case 4: this.note = Note.Ash5; break;
-            case 5: this.note = Note.A5; break;
-            case 6: this.note = Note.Gsh5; break;
-            case 7: this.note = Note.G5; break;
-            case 8: this.note = Note.Fsh5; break;
-            case 9: this.note = Note.F5; break;
-            case 10: this.note = Note.E5; break;
-            case 11: this.note = Note.Dsh5; break;
-            case 12: this.note = Note.D5; break;
-            case 13: this.note = Note.Csh5; break;
-            case 14: this.note = Note.C5; break;
-            default: this.note = Note.ERROR;
+
+        if (this.armPosition == ArmPosition.PENTATONIC) {
+
+            switch (noteBucket) {
+                case 1: this.note = Note.C6; break;
+                case 2: this.note = Note.A5; break;
+                case 3: this.note = Note.G5; break;
+                case 4: this.note = Note.E5; break;
+                case 5: this.note = Note.D5; break;
+                case 6: this.note = Note.C5; break;
+                default: this.note = Note.ERROR;
+            }
+
+        } else {
+
+            switch (noteBucket) {
+                case 1: this.note = Note.Csh6; break;
+                case 2: this.note = Note.C6; break;
+                case 3: this.note = Note.B5; break;
+                case 4: this.note = Note.Ash5; break;
+                case 5: this.note = Note.A5; break;
+                case 6: this.note = Note.Gsh5; break;
+                case 7: this.note = Note.G5; break;
+                case 8: this.note = Note.Fsh5; break;
+                case 9: this.note = Note.F5; break;
+                case 10: this.note = Note.E5; break;
+                case 11: this.note = Note.Dsh5; break;
+                case 12: this.note = Note.D5; break;
+                case 13: this.note = Note.Csh5; break;
+                case 14: this.note = Note.C5; break;
+                default: this.note = Note.ERROR;
+            }
         }
 
         // calculate pitch bend
         final int PITCH_BUCKETS_PER_NOTE = (NECK_LOWEST_POSITION - NECK_HIGHEST_POSITION + 1) / NUMBER_OF_NOTES;
         final int normalised = distance - PITCH_BUCKETS_PER_NOTE * (noteBucket - 1) - PITCH_BUCKETS_PER_NOTE / 2;
-        // TODO: 6.12.2017 remove hard-coding
-        switch (normalised) {
-            case -2: this.pitchBend = PITCH_BEND_DOWN_LIMIT; break;
-            case -1: this.pitchBend = PITCH_BEND_DOWN_LIMIT / 2; break;
-            case 0: this.pitchBend = PITCH_BEND_DEFAULT; break;
-            case 1: this.pitchBend = PITCH_BEND_UP_LIMIT / 2; break;
-            case 2: this.pitchBend = PITCH_BEND_UP_LIMIT; break;
-            default:
-                System.err.println("Pitch bend out of range.");
-                this.pitchBend = PITCH_BEND_DEFAULT;
-        }
+        this.pitchBend = PITCH_BEND_DEFAULT - ((PITCH_BEND_DOWN_LIMIT * normalised * 2) / PITCH_BUCKETS_PER_NOTE);
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-        GuitarEvent event = (GuitarEvent) o;
+        GuitarEvent that = (GuitarEvent) o;
 
-        if (played != event.played) {
-            return false;
-        }
-        if (armPosition != event.armPosition) {
-            return false;
-        }
-        return note == event.note;
+        if (played != that.played) return false;
+        if (pitchBend != that.pitchBend) return false;
+        if (note != that.note) return false;
+        return armPosition == that.armPosition;
     }
 
     @Override
