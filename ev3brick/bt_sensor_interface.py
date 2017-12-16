@@ -10,6 +10,9 @@ from timeit import default_timer as timer
 tmp_bench_full = [] # benchmarking full loop with sending
 tmp_bench_pass = [] # benchmarking loop without sending
 
+ev3.Leds.set_color(ev3.Leds.LEFT, ev3.Leds.RED)
+ev3.Leds.set_color(ev3.Leds.RIGHT, ev3.Leds.RED)
+
 ########################################################################
 ## Fast file I/O functions (faster than API interface)
 ########################################################################
@@ -49,26 +52,38 @@ motorMediumValueRaw = open(motorMedium ._path + "/position", "rb")
 BT_ADDR = "C0:EE:FB:27:84:7D"
 UUID = "09579b39-da5f-47be-9e59-77ad6793c725"
 
-service_matches = find_service( uuid = UUID, address = BT_ADDR )
+def bluetooth_setup():
 
-if len(service_matches) == 0:
-    print("couldn't find the SampleServer service =(")
-    sys.exit(0)
+    ev3.Leds.set_color(ev3.Leds.LEFT, ev3.Leds.ORANGE)
+    ev3.Leds.set_color(ev3.Leds.RIGHT, ev3.Leds.ORANGE)
 
-first_match = service_matches[0]
-port = first_match["port"]
-name = first_match["name"]
-host = first_match["host"]
+    # Loop until service is connected
+    while(True):
+        service_matches = find_service( uuid = UUID, address = BT_ADDR )
+        if len(service_matches) == 0:
+            print("couldn't find the SampleServer service =(")
+        else:
+            print("service found...")
+            break
+        time.sleep(1)
 
-print("connecting to \"%s\" on %s" % (name, host))
+    ev3.Leds.set_color(ev3.Leds.LEFT, ev3.Leds.GREEN)
+    ev3.Leds.set_color(ev3.Leds.RIGHT, ev3.Leds.GREEN)
 
-# Create the client socket
-sock=BluetoothSocket( RFCOMM )
-sock.connect((host, port))
+    first_match = service_matches[0]
+    port = first_match["port"]
+    name = first_match["name"]
+    host = first_match["host"]
 
+    print("connecting to \"%s\" on %s" % (name, host))
 
-def mapper(note):
-    return int(60 + note / 10)
+    # Create the client socket
+    sock=BluetoothSocket( RFCOMM )
+    sock.connect((host, port))
+
+    return sock
+
+sock = bluetooth_setup()
 
 ########################################################################
 ## Linux signal handler
@@ -115,8 +130,10 @@ while True:
         LAST_BTN = new_btn
         LAST_CLC = new_clc
 
-        if(new_btn == 0):
-            sock.send(str(mapper(new_note)))
+        try:
+            sock.send(str(new_note)+";"+str(new_btn)+";"+str(new_clc))
+        except:
+            sock = bluetooth_setup()
 
         time_end = timer()
 
